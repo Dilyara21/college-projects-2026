@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Resume Builder</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ══ LEFT: FORM ══ -->
+  <div class="form-panel">
+    <h1>✨ Resume Builder</h1>
+    <p>Заполни форму — резюме создаётся автоматически справа</p>
+
+    <!-- Personal Info -->
+    <div class="section-title">Личная информация</div>
+
+    <div class="field-group">
+      <div class="field">
+        <label>Имя и фамилия</label>
+        <input type="text" id="name" placeholder="Алексей Иванов" oninput="render()">
+      </div>
+      <div class="field">
+        <label>Должность / профессия</label>
+        <input type="text" id="jobTitle" placeholder="Frontend Developer" oninput="render()">
+      </div>
+    </div>
+
+    <div class="field-group">
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="email" placeholder="alex@email.com" oninput="render()">
+      </div>
+      <div class="field">
+        <label>Телефон</label>
+        <input type="text" id="phone" placeholder="+7 700 000 00 00" oninput="render()">
+      </div>
+    </div>
+
+    <div class="field-group">
+      <div class="field">
+        <label>Город</label>
+        <input type="text" id="city" placeholder="Алматы, Казахстан" oninput="render()">
+      </div>
+      <div class="field">
+        <label>LinkedIn / GitHub / сайт</label>
+        <input type="text" id="link" placeholder="github.com/username" oninput="render()">
+      </div>
+    </div>
+
+    <div class="field-group full">
+      <div class="field">
+        <label>О себе (краткое summary)</label>
+        <textarea id="summary" rows="3" placeholder="Опытный разработчик с 3+ годами опыта..." oninput="render()"></textarea>
+      </div>
+    </div>
+
+    <!-- Skills -->
+    <div class="section-title">Навыки</div>
+    <div class="skills-input-wrap">
+      <input type="text" id="skillInput" placeholder="Например: JavaScript" onkeydown="skillKeydown(event)">
+      <button class="add-btn" onclick="addSkill()">+ Добавить</button>
+    </div>
+    <div class="tags" id="skillTags"></div>
+
+    <!-- Experience -->
+    <div class="section-title">Опыт работы</div>
+    <div id="expBlocks"></div>
+    <button class="add-entry-btn" onclick="addExp()">+ Добавить место работы</button>
+
+    <!-- Education -->
+    <div class="section-title">Образование</div>
+    <div id="eduBlocks"></div>
+    <button class="add-entry-btn" onclick="addEdu()">+ Добавить учебное заведение</button>
+
+    <!-- Actions -->
+    <div class="actions">
+      <button class="btn-primary" onclick="window.print()">🖨 Печать / PDF</button>
+      <button class="btn-secondary" onclick="clearAll()">🗑 Очистить</button>
+    </div>
+  </div>
+
+  <!-- ══ RIGHT: PREVIEW ══ -->
+  <div class="preview-panel">
+    <h2>Предпросмотр резюме</h2>
+    <div id="resume">
+      <div class="empty-preview">
+        <div style="font-size:40px;margin-bottom:12px">📄</div>
+        Начни заполнять форму слева —<br>резюме появится здесь автоматически
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  let skills = [];
+  let experiences = [];
+  let educations = [];
+  let expIdCounter = 0;
+  let eduIdCounter = 0;
+
+  /* ── SKILLS ── */
+  function skillKeydown(e) {
+    if (e.key === 'Enter') addSkill();
+  }
+
+  function addSkill() {
+    const input = document.getElementById('skillInput');
+    const val = input.value.trim();
+    if (!val || skills.includes(val)) { input.value = ''; return; }
+    skills.push(val);
+    input.value = '';
+    renderTags();
+    render();
+  }
+
+  function removeSkill(s) {
+    skills = skills.filter(x => x !== s);
+    renderTags();
+    render();
+  }
+
+  function renderTags() {
+    document.getElementById('skillTags').innerHTML = skills.map(s => `
+      <span class="tag">${s}<button onclick="removeSkill('${s}')" title="Удалить">×</button></span>
+    `).join('');
+  }
+
+  /* ── EXPERIENCE ── */
+  function addExp() {
+    const id = expIdCounter++;
+    experiences.push({ id, company: '', role: '', period: '', desc: '' });
+    renderExpBlocks();
+  }
+
+  function removeExp(id) {
+    experiences = experiences.filter(e => e.id !== id);
+    renderExpBlocks();
+    render();
+  }
+
+  function renderExpBlocks() {
+    document.getElementById('expBlocks').innerHTML = experiences.map(e => `
+      <div class="entry-block">
+        <button class="remove-entry" onclick="removeExp(${e.id})">×</button>
+        <div class="field-group">
+          <div class="field">
+            <label>Компания</label>
+            <input type="text" value="${e.company}" placeholder="Google" oninput="updateExp(${e.id},'company',this.value)">
+          </div>
+          <div class="field">
+            <label>Должность</label>
+            <input type="text" value="${e.role}" placeholder="Junior Developer" oninput="updateExp(${e.id},'role',this.value)">
+          </div>
+        </div>
+        <div class="field-group full" style="margin-top:10px">
+          <div class="field">
+            <label>Период</label>
+            <input type="text" value="${e.period}" placeholder="2022 — 2024" oninput="updateExp(${e.id},'period',this.value)">
+          </div>
+        </div>
+        <div class="field-group full" style="margin-top:10px">
+          <div class="field">
+            <label>Описание обязанностей</label>
+            <textarea rows="2" placeholder="Разрабатывал интерфейсы на React..." oninput="updateExp(${e.id},'desc',this.value)">${e.desc}</textarea>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function updateExp(id, field, value) {
+    const e = experiences.find(x => x.id === id);
+    if (e) { e[field] = value; render(); }
+  }
+
+  /* ── EDUCATION ── */
+  function addEdu() {
+    const id = eduIdCounter++;
+    educations.push({ id, school: '', degree: '', period: '' });
+    renderEduBlocks();
+  }
+
+  function removeEdu(id) {
+    educations = educations.filter(e => e.id !== id);
+    renderEduBlocks();
+    render();
+  }
+
+  function renderEduBlocks() {
+    document.getElementById('eduBlocks').innerHTML = educations.map(e => `
+      <div class="entry-block">
+        <button class="remove-entry" onclick="removeEdu(${e.id})">×</button>
+        <div class="field-group">
+          <div class="field">
+            <label>Учебное заведение</label>
+            <input type="text" value="${e.school}" placeholder="КазНУ" oninput="updateEdu(${e.id},'school',this.value)">
+          </div>
+          <div class="field">
+            <label>Специальность / степень</label>
+            <input type="text" value="${e.degree}" placeholder="Информационные системы" oninput="updateEdu(${e.id},'degree',this.value)">
+          </div>
+        </div>
+        <div class="field-group full" style="margin-top:10px">
+          <div class="field">
+            <label>Период</label>
+            <input type="text" value="${e.period}" placeholder="2020 — 2024" oninput="updateEdu(${e.id},'period',this.value)">
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function updateEdu(id, field, value) {
+    const e = educations.find(x => x.id === id);
+    if (e) { e[field] = value; render(); }
+  }
+
+  /* ── RENDER RESUME ── */
+  function val(id) {
+    return document.getElementById(id)?.value?.trim() || '';
+  }
+
+  function render() {
+    const name     = val('name');
+    const jobTitle = val('jobTitle');
+    const email    = val('email');
+    const phone    = val('phone');
+    const city     = val('city');
+    const link     = val('link');
+    const summary  = val('summary');
+
+    const hasAny = name || jobTitle || email || phone || skills.length || experiences.length || educations.length;
+
+    if (!hasAny) {
+      document.getElementById('resume').innerHTML = `
+        <div class="empty-preview">
+          <div style="font-size:40px;margin-bottom:12px">📄</div>
+          Начни заполнять форму слева —<br>резюме появится здесь автоматически
+        </div>`;
+      return;
+    }
+
+    const contactsHTML = [
+      email && `📧 ${email}`,
+      phone && `📞 ${phone}`,
+      city  && `📍 ${city}`,
+      link  && `🔗 ${link}`
+    ].filter(Boolean).map(c => `<span>${c}</span>`).join('');
+
+    const skillsHTML = skills.length
+      ? skills.map(s => `<span class="skill-pill">${s}</span>`).join('')
+      : '<span style="font-size:12px;color:#bbb;font-family:system-ui">Навыки не добавлены</span>';
+
+    const expHTML = experiences.length
+      ? experiences.map(e => `
+          <div class="resume-entry">
+            <div class="resume-entry-title">${e.role || 'Должность'}</div>
+            <div class="resume-entry-sub">
+              <span>${e.company || 'Компания'}</span>
+              <span style="color:#aaa">${e.period || ''}</span>
+            </div>
+            ${e.desc ? `<div class="resume-entry-desc">${e.desc}</div>` : ''}
+          </div>
+        `).join('')
+      : '<div style="font-size:12px;color:#bbb;font-family:system-ui">Опыт не добавлен</div>';
+
+    const eduHTML = educations.length
+      ? educations.map(e => `
+          <div class="resume-entry">
+            <div class="resume-entry-title">${e.school || 'Учебное заведение'}</div>
+            <div class="resume-entry-sub">
+              <span>${e.degree || ''}</span>
+              <span style="color:#aaa">${e.period || ''}</span>
+            </div>
+          </div>
+        `).join('')
+      : '<div style="font-size:12px;color:#bbb;font-family:system-ui">Образование не добавлено</div>';
+
+    document.getElementById('resume').innerHTML = `
+      <div class="resume-header">
+        <h1>${name || 'Ваше имя'}</h1>
+        ${jobTitle ? `<div class="job-title">${jobTitle}</div>` : ''}
+        <div class="resume-contacts">${contactsHTML}</div>
+      </div>
+
+      <div class="resume-body">
+        <div class="resume-sidebar">
+          <div class="resume-section">
+            <div class="resume-section-title">Навыки</div>
+            ${skillsHTML}
+          </div>
+        </div>
+
+        <div class="resume-main">
+          ${summary ? `<div class="resume-summary">${summary}</div>` : ''}
+
+          <div class="resume-section">
+            <div class="resume-section-title">Опыт работы</div>
+            ${expHTML}
+          </div>
+
+          <div class="resume-section">
+            <div class="resume-section-title">Образование</div>
+            ${eduHTML}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  /* ── CLEAR ── */
+  function clearAll() {
+    ['name','jobTitle','email','phone','city','link','summary'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    skills = [];
+    experiences = [];
+    educations = [];
+    expIdCounter = 0;
+    eduIdCounter = 0;
+    renderTags();
+    renderExpBlocks();
+    renderEduBlocks();
+    render();
+  }
+
+  render();
+</script>
+
+</body>
+</html>
