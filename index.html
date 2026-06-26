@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CollegeSecret</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="app">
+
+  <div class="header">
+    <h1>🎭 CollegeSecret</h1>
+    <p>Анонимные признания · без имён · без страха</p>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="setFilter('all', this)">Все</button>
+    <button class="tab" onclick="setFilter('confession', this)">Признания</button>
+    <button class="tab" onclick="setFilter('story', this)">Истории</button>
+    <button class="tab" onclick="setFilter('gossip', this)">Слухи</button>
+  </div>
+
+  <div class="compose">
+    <div class="compose-types">
+      <button class="type-btn sel-confession" data-t="confession" onclick="selectType('confession')">😶 Признание</button>
+      <button class="type-btn" data-t="story" onclick="selectType('story')">📖 История</button>
+      <button class="type-btn" data-t="gossip" onclick="selectType('gossip')">🤫 Слух</button>
+    </div>
+    <textarea id="txt" rows="3" placeholder="Напиши анонимно... никто не узнает кто ты"></textarea>
+    <div class="compose-footer">
+      <span class="anon-badge">🔒 Полностью анонимно</span>
+      <button class="post-btn" onclick="publish()">Опубликовать</button>
+    </div>
+  </div>
+
+  <div class="feed" id="feed"></div>
+
+</div>
+
+<script>
+  const EMOJIS = ['🔥','💀','😭','💅','🤡','👀','💔','🫡'];
+  const typeLabels = { confession: 'Признание', story: 'История', gossip: 'Слух' };
+  const tagClass   = { confession: 'tag-confession', story: 'tag-story', gossip: 'tag-gossip' };
+
+  let filter  = 'all';
+  let selType = 'confession';
+  let nextId  = 4;
+
+  let posts = [
+    {
+      id: 1, type: 'confession', time: '2ч назад',
+      text: 'Я уже 3 недели не хожу на лекции по высшей математике, но всё равно сдаю все контрольные.',
+      reactions: {'🔥':12,'💀':4,'😭':7,'💅':2,'🤡':15,'👀':6,'💔':1,'🫡':3}, voted: null
+    },
+    {
+      id: 2, type: 'gossip', time: '4ч назад',
+      text: 'Наш декан каждый день ест один и тот же бутерброд в 12:30 у окна. Мы уже делаем ставки на начинку.',
+      reactions: {'🔥':34,'💀':2,'😭':0,'💅':9,'🤡':41,'👀':17,'💔':0,'🫡':5}, voted: null
+    },
+    {
+      id: 3, type: 'story', time: 'вчера',
+      text: 'Однажды я перепутал аудитории и провёл целую пару среди незнакомых студентов. Никто ничего не сказал. Я тоже.',
+      reactions: {'🔥':8,'💀':0,'😭':22,'💅':3,'🤡':56,'👀':11,'💔':4,'🫡':2}, voted: null
+    }
+  ];
+
+  function render() {
+    const feed = document.getElementById('feed');
+    const visible = filter === 'all' ? posts : posts.filter(p => p.type === filter);
+    if (!visible.length) {
+      feed.innerHTML = '<div class="empty">👻 Пока пусто</div>';
+      return;
+    }
+    feed.innerHTML = visible.slice().reverse().map(p => `
+      <div class="card">
+        <div class="card-top">
+          <span class="tag ${tagClass[p.type]}">${typeLabels[p.type]}</span>
+          <span style="font-size:12px;color:#aaa">👤 Аноним</span>
+          <span class="card-time">${p.time}</span>
+        </div>
+        <div class="card-text">${p.text}</div>
+        <div class="reactions">
+          ${EMOJIS.map(e => `
+            <button class="react-btn ${p.voted === e ? 'voted' : ''}" onclick="react(${p.id},'${e}')">
+              ${e} <span class="react-count">${p.reactions[e] || 0}</span>
+            </button>
+          `).join('')}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function setFilter(f, btn) {
+    filter = f;
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    render();
+  }
+
+  function selectType(t) {
+    selType = t;
+    document.querySelectorAll('.type-btn').forEach(b => {
+      b.className = 'type-btn';
+      if (b.dataset.t === t) b.classList.add('sel-' + t);
+    });
+    const ph = {
+      confession: 'Признайся в том, что скрываешь...',
+      story:      'Расскажи свою историю...',
+      gossip:     'Поделись слухом анонимно...'
+    };
+    document.getElementById('txt').placeholder = ph[t];
+  }
+
+  function publish() {
+    const txt = document.getElementById('txt').value.trim();
+    if (!txt) return;
+    const r = {};
+    EMOJIS.forEach(e => r[e] = 0);
+    posts.push({ id: nextId++, type: selType, text: txt, time: 'только что', reactions: r, voted: null });
+    document.getElementById('txt').value = '';
+    render();
+  }
+
+  function react(id, emoji) {
+    const p = posts.find(x => x.id === id);
+    if (!p) return;
+    if (p.voted === emoji) {
+      p.reactions[emoji]--;
+      p.voted = null;
+    } else {
+      if (p.voted) p.reactions[p.voted]--;
+      p.reactions[emoji] = (p.reactions[emoji] || 0) + 1;
+      p.voted = emoji;
+    }
+    render();
+  }
+
+  render();
+</script>
+
+</body>
+</html>
